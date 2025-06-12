@@ -6,61 +6,37 @@ const profilRoutes = require('./routes/profil');
 const riwayatRoutes = require('./routes/riwayat');
 
 const app = express();
+const PORT = 5000;
 
-// Middleware untuk CORS
+// Middleware untuk CORS dulu
 app.use(cors({
-  origin: '*',
+  origin: '*', // atau spesifik ke frontend URL
   methods: ['GET', 'POST', 'PUT', 'DELETE'],
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
-// Middleware untuk parsing body
-app.use(express.json({
-  limit: '50mb'
+// Middleware untuk parsing body dengan limit yang lebih besar
+app.use(express.json({ 
+  limit: '50mb',
+  verify: (req, res, buf) => {
+    console.log('=== RAW BODY RECEIVED ===');
+    console.log('Content-Type:', req.headers['content-type']);
+    console.log('Body length:', buf.length);
+    console.log('Body preview:', buf.toString().substring(0, 200) + '...');
+  }
 }));
 
-app.use(express.urlencoded({
-  extended: true,
-  limit: '50mb'
+app.use(express.urlencoded({ 
+  extended: true, 
+  limit: '50mb' 
 }));
 
-// Middleware untuk logging (optional, bisa dicomment untuk production)
+// Middleware untuk logging semua request
 app.use((req, res, next) => {
+  console.log(`\n=== ${new Date().toISOString()} ===`);
   console.log(`${req.method} ${req.url}`);
+  console.log('Headers:', req.headers);
   next();
-});
-
-// Health check endpoint
-app.get('/', async (req, res) => {
-  try {
-    // Test database connection
-    await initializeDatabase();
-    res.json({ 
-      message: 'API is running!', 
-      timestamp: new Date().toISOString(),
-      status: 'healthy'
-    });
-  } catch (error) {
-    console.error('Health check failed:', error);
-    res.status(500).json({ 
-      error: 'Database connection failed', 
-      message: error.message 
-    });
-  }
-});
-
-// Middleware untuk inisialisasi database di setiap API call
-app.use('/api', async (req, res, next) => {
-  try {
-    await initializeDatabase();
-    next();
-  } catch (error) {
-    console.error('Database initialization failed:', error);
-    res.status(500).json({ 
-      error: 'Database connection failed', 
-      message: error.message 
-    });
-  }
 });
 
 // Routes
@@ -70,20 +46,9 @@ app.use('/api/riwayat', riwayatRoutes);
 
 // Error handling middleware
 app.use((err, req, res, next) => {
-  console.error('Server Error:', err);
-  res.status(500).json({ 
-    error: 'Internal Server Error', 
-    message: err.message 
-  });
+  console.error('=== SERVER ERROR ===');
+  console.error(err.stack);
+  res.status(500).json({ error: 'Internal Server Error', details: err.message });
 });
 
-// 404 handler
-app.use('*', (req, res) => {
-  res.status(404).json({ 
-    error: 'Route not found',
-    path: req.originalUrl 
-  });
-});
-
-// Export untuk Vercel (WAJIB untuk serverless)
 module.exports = app;
