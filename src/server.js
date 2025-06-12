@@ -65,3 +65,5 @@ initializeDatabase()
     console.error('❌ Gagal inisialisasi database:', err.message);
     process.exit(1);
   });
+
+module.exports = app;
